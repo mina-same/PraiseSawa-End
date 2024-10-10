@@ -47,6 +47,16 @@ const getArbSongBySongID = async (req, res) => {
 };
 
 // Search for songs
+const normalizeForSearch = (text) => {
+  return text
+    .replace(/ا/g, "[اأإآ]")  // Replace 'ا' with a pattern that matches 'ا', 'أ', 'إ', and 'آ'
+    .replace(/ة/g, "ه")       // Normalize 'Taa Marbuta' to 'Haa'
+    .replace(/ى/g, "ي")       // Normalize 'Alif Maqsoora' to 'Ya'
+    .replace(/ئ/g, "ي")       // Normalize 'Hamza on Ya' to 'Ya'
+    .replace(/ؤ/g, "و")       // Normalize 'Hamza on Waw' to 'Waw'
+    .replace(/\s+/g, " ");    // Normalize multiple spaces
+};
+
 const searchForArbSong = async (req, res) => {
   const { query, page = 1, limit = 5 } = req.query;
 
@@ -54,14 +64,15 @@ const searchForArbSong = async (req, res) => {
     return res.status(400).json({ msg: "Query parameter is required" });
   }
 
+  const normalizedQuery = normalizeForSearch(query); // Normalize the query for search
   const skip = (page - 1) * limit;
 
   try {
     const songs = await ArbSong.find({
       $or: [
-        { title: { $regex: query, $options: "i" } },
-        { verses: { $elemMatch: { $regex: query, $options: "i" } } },
-        { chorus: { $regex: query, $options: "i" } },
+        { title: { $regex: normalizedQuery, $options: "i" } },
+        { verses: { $elemMatch: { $regex: normalizedQuery, $options: "i" } } },
+        { chorus: { $regex: normalizedQuery, $options: "i" } },
       ],
     })
       .skip(skip)
@@ -73,6 +84,8 @@ const searchForArbSong = async (req, res) => {
     res.status(500).send("Server Error");
   }
 };
+
+
 
 // Create a new song
 const createSong = async (req, res) => {
